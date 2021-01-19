@@ -2,12 +2,13 @@
 /*
 Plugin Name: Infoset
 Plugin URI: https://wordpress.org/plugins/infoset
-Description: Official <a href="https://www.infoset.app">Infoset</a> chat widget for WordPress.
+Description: Official <a href="https://infoset.app">Infoset</a> chat widget for WordPress.
 Author: Infoset
-Author URI: https://www.infoset.app
-Version: 0.1
+Author URI: https://infoset.app
+Version: 1.0
  */
 
+// TODO IDENTITY VERIFICATION
 class IdVerificationCalculator
 {
   private $raw_data = array();
@@ -80,7 +81,7 @@ END;
   }
 
   public function getAuthUrl() {
-    return "https://localhost:5001/v1/integration/wordpress/chat?state=".get_site_url()."::".wp_create_nonce("infoset-auth");
+    return "https://dashboard.infoset.app/select-chat?service=wordpress&state=".get_site_url()."::".wp_create_nonce("infoset-auth");
   }
 
   public function htmlUnclosed()
@@ -104,7 +105,7 @@ END;
 
     return <<<END
 
-    <link rel="stylesheet" property='stylesheet' href="https://marketing.intercomassets.com/assets/redesign-ead0ee66f7c89e2930e04ac1b7e423494c29e8e681382f41d0b6b8a98b4591e1.css">
+    <link rel="stylesheet" property='stylesheet' href="https://cdn.infoset.app/infoset-wordpress-ead0ee66f7c89e2930e04ac1b7e423494c29e8e681382f41d0b6b8a98b4591e1.css">
     <style>
       #wpcontent {
         background-color: #ffffff;
@@ -128,8 +129,8 @@ END;
 
               <div id="get_infoset_btn_container" style="position:relative;margin-top:30px;">
                 <a href="$auth_url">
-                  <img src="https://static.intercomassets.com/assets/oauth/primary-7edb2ebce84c088063f4b86049747c3a.png" srcset="https://static.intercomassets.com/assets/oauth/primary-7edb2ebce84c088063f4b86049747c3a.png 1x, https://static.intercomassets.com/assets/oauth/primary@2x-0d69ca2141dfdfa0535634610be80994.png 2x, https://static.intercomassets.com/assets/oauth/primary@3x-788ed3c44d63a6aec3927285e920f542.png 3x"/>
-                </a>
+                  <img src="https://cdn.infoset.app/oauth-login-20210118.png" srcset="https://cdn.infoset.app/oauth-login-20210118.png 1x, https://cdn.infoset.app/oauth-login-20210118@2x.png 2x, https://cdn.infoset.app/oauth-login-20210118@3x.png 3x"/>
+                </a>s
               </div>
             </div>
 
@@ -209,17 +210,17 @@ END;
   public function setStyles($settings) {
     $styles = array();
     $api_key = Escaper::escAttr($settings['api_key']);
-    $identity_verification = Escaper::escAttr($settings['identity_verification']);
+    // $identity_verification = Escaper::escAttr($settings['identity_verification']);
 
-
-    // Use Case : Identity Verification enabled : checkbox checked and disabled
+    /*
+    // Case : Identity Verification enabled : checkbox checked and disabled
     if($identity_verification) {
       $styles['identity_verification_state'] = 'checked disabled';
     } else {
       $styles['identity_verification_state'] = '';
-    }
+    } */
 
-    // Use Case : app_id here but Identity Verification disabled
+    // Case : api_key here but Identity Verification disabled
     if (!empty($api_key)) {
       $styles['app_secret_row_style'] = 'display: none;';
       $styles['app_secret_link_style'] = '';
@@ -228,7 +229,7 @@ END;
       $styles['app_secret_link_style'] = 'display: none;';
     }
 
-    // Copying apiKey from Infoset Setup Guide for validation
+    // Copy apiKey from Infoset Setup Guide for validation
     if (isset($_GET['apiKey'])) {
         $api_key = Escaper::escAttr($_GET['apiKey']);
         $styles['api_key_state'] = 'readonly';
@@ -236,16 +237,16 @@ END;
         $styles['button_submit_style'] = '';
         $styles['api_key_copy_hidden'] = 'display: none;';
         $styles['api_key_copy_title'] = '';
-        $styles['identity_verification_state'] = 'disabled'; # Prevent from sending POST data about identity_verification when using app_id form
+        $styles['identity_verification_state'] = 'disabled'; # Prevent from sending POST data about identity_verification when using api_key form
     } else {
       $styles['api_key_class'] = "";
       $styles['button_submit_style'] = 'display: none;';
       $styles['api_key_copy_title'] = 'display: none;';
-      $styles['api_key_state'] = 'disabled'; # Prevent from sending POST data about app_id when using identity_verification form
+      $styles['api_key_state'] = 'disabled'; # Prevent from sending POST data about api_key when using identity_verification form
       $styles['api_key_copy_hidden'] = '';
     }
 
-    //Use Case App_id successfully copied
+    // Case api_key successfully copied
     if (isset($_GET['saved'])) {
       $styles['api_key_copy_hidden'] = 'display: none;';
       $styles['api_key_saved_title'] = '';
@@ -253,7 +254,7 @@ END;
       $styles['api_key_saved_title'] = 'display: none;';
     }
 
-    // Display 'connect with intercom' button if no app_id provided (copied from setup guide or from Oauth)
+    // Display 'reconnect with infoset' button if no api_key provided (copied from setup guide or from Oauth)
     if (empty($api_key)) {
       $styles['api_key_row_style'] = 'display: none;';
       $styles['api_key_link_style'] = '';
