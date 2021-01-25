@@ -74,7 +74,7 @@ END;
   }
 
   public function getAuthUrl() {
-    return "localhost:8000/select-chat?service=wordpress&state=".get_site_url()."::".wp_create_nonce("infoset-auth");
+    return "https://dashboard.infoset.app/select-chat?service=wordpress&state=".get_site_url()."::".wp_create_nonce("infoset-auth");
   }
 
   public function htmlUnclosed()
