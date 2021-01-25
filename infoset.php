@@ -11,51 +11,44 @@ Version: 1.0
 // TODO IDENTITY VERIFICATION
 class IdVerificationCalculator
 {
-  private $raw_data = array();
-  private $secret_key = "";
+  private $user_config = NULL;
+  private $private_key = "";
 
-  public function __construct($data, $secret_key)
+  public function __construct($user_config, $private_key)
   {
-    $this->raw_data = $data;
-    $this->secret_key = $secret_key;
+    $this->user_config = $user_config;
+    $this->private_key = $private_key;
   }
 
-  public function identityVerificationComponent()
-  {
-    $secret_key = $this->getSecretKey();
-    if (empty($secret_key))
-    {
-      return $this->emptyIdentityVerificationHashComponent();
+  public function idVerificationComponent() {
+    $private_key = $this->privateKey();
+    $user_config = $this->userConfig();
+
+    if (is_null($private_key) || empty($user_config)) {
+      return $this->emptyIdVerificationHashComponent();
     }
-    if (array_key_exists("user_id", $this->getRawData()))
-    {
-      return $this->identityVerificationHashComponent("user_id");
-    }
-    if (array_key_exists("email", $this->getRawData()))
-    {
-      return $this->identityVerificationHashComponent("email");
-    }
-    return $this->emptyIdentityVerificationHashComponent();
+
+    return $this->idVerificationHashComponent();
   }
 
-  private function emptyIdentityVerificationHashComponent()
-  {
+  private function emptyIdVerificationHashComponent() {
     return array();
   }
 
-  private function identityVerificationHashComponent($key)
-  {
-    $raw_data = $this->getRawData();
-    return array("user_hash" => hash_hmac("sha256", $raw_data[$key], $this->getSecretKey()));
+  private function idVerificationHashComponent() {
+    return array("userHash" => hash_hmac("sha256", $this->userEmail(), $this->privateKey()));
   }
 
-  private function getSecretKey()
-  {
-    return $this->secret_key;
+  private function privateKey() {
+    return $this->private_key;
   }
-  private function getRawData()
-  {
-    return $this->raw_data;
+
+  private function userEmail() {
+    return $this->user_config["email"];
+  }
+
+  private function userConfig() {
+    return $this->user_config;
   }
 }
 
@@ -81,7 +74,7 @@ END;
   }
 
   public function getAuthUrl() {
-    return "https://dashboard.infoset.app/select-chat?service=wordpress&state=".get_site_url()."::".wp_create_nonce("infoset-auth");
+    return "localhost:8000/select-chat?service=wordpress&state=".get_site_url()."::".wp_create_nonce("infoset-auth");
   }
 
   public function htmlUnclosed()
@@ -89,15 +82,16 @@ END;
     $settings = $this->getSettings();
     $styles = $this->getStyles();
     $api_key = Escaper::escAttr($settings['api_key']);
+    $private_key = Escaper::escAttr($settings['private_key']);
     $auth_url = $this->getAuthUrl();
     $dismissable_message = ''; 
-    if (isset($_GET['apiKey'])) {
+    if (isset($_GET['api_key'])) {
       
-      $api_key = Escaper::escAttr($_GET['apiKey']);
-      $dismissable_message = $this->dismissibleMessage("We've copied your new Infoset api key below. Click to save changes and then close this window to finish signing up for Infoset.");
+      $api_key = Escaper::escAttr($_GET['api_key']);
+      $dismissable_message = $this->dismissibleMessage("We've copied your new Infoset Chat Api Key below. Click to save changes and then close this window to finish installing the chat widget.");
     }
     if (isset($_GET['saved'])) {
-      $dismissable_message = $this->dismissibleMessage("Your api key has been successfully saved. You can now close this window to finish signing up for Infoset.");
+      $dismissable_message = $this->dismissibleMessage("Your chat api key has been successfully saved. You can now close this window to finish signing installing the chat widget.");
     }
     if (isset($_GET['authenticated'])) {
       $dismissable_message = $this->dismissibleMessage('You\'ve successfully authenticated with Infoset');
@@ -174,14 +168,15 @@ END;
     $styles = $this->getStyles();
     $auth_url = $this->getAuthUrl();
     $api_key = Escaper::escAttr($settings['api_key']);
+    $private_key = Escaper::escAttr($settings['private_key']);
     $auth_url_identity_verification = "";
     if (!empty($api_key)) {
-      $auth_url_identity_verification = $auth_url.'&enable_identity_verification=1';
+      $auth_url_identity_verification = $auth_url.'&identity_verification=1';
     }
     return <<<END
                   </form>
                   <div style="$styles[api_key_copy_hidden]">
-                    <div style="$styles[app_secret_link_style]">
+                    <div style="$styles[private_key_link_style]">
                       <a class="c__blue" href="$auth_url_identity_verification">Authenticate with your Infoset application to enable Identity Verification</a>
                     </div>
                     <p style="font-size:0.86em">Identity verification helps ensure that chats between you and your users are kept private and that one person cannot impersonate another.<br/>
@@ -210,23 +205,22 @@ END;
   public function setStyles($settings) {
     $styles = array();
     $api_key = Escaper::escAttr($settings['api_key']);
-    // $identity_verification = Escaper::escAttr($settings['identity_verification']);
+    $private_key = Escaper::escAttr($settings['private_key']);
 
-    /*
     // Case : Identity Verification enabled : checkbox checked and disabled
-    if($identity_verification) {
+    if($private_key) {
       $styles['identity_verification_state'] = 'checked disabled';
     } else {
       $styles['identity_verification_state'] = '';
-    } */
+    }
 
     // Case : api_key here but Identity Verification disabled
     if (!empty($api_key)) {
-      $styles['app_secret_row_style'] = 'display: none;';
-      $styles['app_secret_link_style'] = '';
+      $styles['private_key_row_style'] = 'display: none;';
+      $styles['private_key_link_style'] = '';
     } else {
-      $styles['app_secret_row_style'] = '';
-      $styles['app_secret_link_style'] = 'display: none;';
+      $styles['private_key_row_style'] = '';
+      $styles['private_key_link_style'] = 'display: none;';
     }
 
     // Copy apiKey from Infoset Setup Guide for validation
@@ -278,11 +272,11 @@ END;
 }
 
 class InfosetSnippet {
-	private $snippet_settings = "";
+	private $snippet_config = "";
 
-  public function __construct($snippet_settings)
+  public function __construct($snippet_config)
   {
-    $this->snippet_settings = $snippet_settings;
+    $this->snippet_config = $snippet_config;
   }
   public function html()
   {
@@ -312,58 +306,69 @@ HTML;
 
   private function source()
   {
-  	$snippet_json = $this->snippet_settings->json();
-    $api_key = $this->snippet_settings->apiKey();
-    echo $api_key;
+  	$snippet_json = $this->snippet_config->json();
+    $api_key = $this->snippet_config->apiKey();
 
-    return <<<HTML
-<!-- BEGIN INFOSET CHAT WIDGET -->
-<script type='text/javascript'>!function(){var t=window;if('function'!=typeof t.InfosetChat){var n=document,e=function(){e.c(arguments)};e.q=[],e.c=function(t){e.q.push(t)},t.InfosetChat=e;function a(){var t=n.createElement('script');t.type='text/javascript',t.async=!0,t.src='https://cdn.infoset.app/chat/icw.js';var e=n.getElementsByTagName('script')[0];e.parentNode.insertBefore(t,e)}t.attachEvent?t.attachEvent('onload',a):t.addEventListener('load',a,!1)}}();
-InfosetChat('boot',{widget:{apiKey: '$api_key'}});
-</script>
-<!-- END INFOSET CHAT WIDGET -->
-HTML;
+    return empty(json_decode($snippet_json))
+    ? <<<HTML
+      <!-- BEGIN INFOSET CHAT WIDGET -->
+      <script type='text/javascript'>!function(){var t=window;if('function'!=typeof t.InfosetChat){var n=document,e=function(){e.c(arguments)};e.q=[],e.c=function(t){e.q.push(t)},t.InfosetChat=e;function a(){var t=n.createElement('script');t.type='text/javascript',t.async=!0,t.src='https://cdn.infoset.app/chat/icw.js';var e=n.getElementsByTagName('script')[0];e.parentNode.insertBefore(t,e)}t.attachEvent?t.attachEvent('onload',a):t.addEventListener('load',a,!1)}}();
+      InfosetChat('boot', {
+        widget: { apiKey: '$api_key' },
+      });
+      </script>
+      <!-- END INFOSET CHAT WIDGET -->
+    HTML
+    : <<<HTML
+    <!-- BEGIN INFOSET CHAT WIDGET -->
+    <script type='text/javascript'>!function(){var t=window;if('function'!=typeof t.InfosetChat){var n=document,e=function(){e.c(arguments)};e.q=[],e.c=function(t){e.q.push(t)},t.InfosetChat=e;function a(){var t=n.createElement('script');t.type='text/javascript',t.async=!0,t.src='https://cdn.infoset.app/chat/icw.js';var e=n.getElementsByTagName('script')[0];e.parentNode.insertBefore(t,e)}t.attachEvent?t.attachEvent('onload',a):t.addEventListener('load',a,!1)}}();
+    InfosetChat('boot', {
+      widget: { apiKey: '$api_key' },
+      visitor: $snippet_json
+    });
+    </script>
+    <!-- END INFOSET CHAT WIDGET -->
+    HTML;
   }
 }
 
-class InfosetSnippetSettings
+class InfosetSnippetConfig
 {
-	private $raw_data = array();
+	private $config;
   private $api_key = NULL;
+  private $private_key = NULL;
   private $wordpress_user = NULL;
 
-  public function __construct($raw_data, $api_key = NULL, $wordpress_user = NULL)
-  {
-    $this->raw_data = $this->validateRawData($raw_data);
+  public function __construct($api_key = NULL, $private_key = NULL, $wordpress_user = NULL) {
+    $this->config = array();
+    $this->api_key = $api_key;
+    $this->private_key = $private_key;
+    $this->validateKeys(array("api_key" => $this->api_key, "private_key" => $this->private_key));
     $this->wordpress_user = $wordpress_user;
   }
 
-  public function json()
-  {
-    return json_encode(apply_filters("infoset_settings", $this->getRawData()));
+  public function json() {
+    return json_encode(apply_filters("infoset_settings", $this->configData()));
   }
 
-  public function apiKey()
-  {
-    $raw_data = $this->getRawData();
-    return $raw_data["api_key"];
+  public function apiKey() {
+    return $this->api_key;
   }
 
-  private function getRawData()
+  private function configData()
   {
-    $user = new InfosetUser($this->wordpress_user, $this->raw_data);
-    $settings = $user->buildSettings();
-    // $identityVerificationCalculator = new IdVerificationCalculator($settings, $this->secret);
-    $result = $settings; //array_merge($settings, $identityVerificationCalculator->identityVerificationComponent());
+    $user = new InfosetUser($this->wordpress_user, $this->config);
+    $config = $user->buildConfig();
+    $idVerificationCalculator = new IdVerificationCalculator($config, $this->private_key);
+    $result = array_merge($config, $idVerificationCalculator->idVerificationComponent());
     return $result;
   }
 
-  private function validateRawData($raw_data)
+  private function validateKeys($key_array)
   {
-    if (!array_key_exists("api_key", $raw_data)) {
-      throw new Exception("api_key is required");
+    if (!array_key_exists("api_key", $key_array) || !array_key_exists("private_key", $key_array)) {
+      throw new Exception("api_key and private_key are required");
     }
-    return $raw_data;
   }
 }
 
@@ -387,29 +392,34 @@ class Escaper
 class InfosetUser
 {
 	private $wordpress_user = NULL;
-  private $settings = array();
+  private $config = array();
 
-  public function __construct($wordpress_user, $settings)
-  {
+  public function __construct($wordpress_user, $config) {
     $this->wordpress_user = $wordpress_user;
-    $this->settings = $settings;
+    $this->config = $config;
   }
 
-  public function buildSettings()
-  {
-    if (empty($this->wordpress_user))
-    {
-      return $this->settings;
+  public function buildConfig() {
+    if (empty($this->wordpress_user)) {
+      return $this->config;
     }
-    if (!empty($this->wordpress_user->user_email))
-    {
-      $this->settings["email"] = Escaper::escJS($this->wordpress_user->user_email);
+
+    if (!empty($this->wordpress_user->user_email)) {
+      $this->config["email"] = Escaper::escJS($this->wordpress_user->user_email);
     }
-    if (!empty($this->wordpress_user->display_name))
-    {
-      $this->settings["name"] = Escaper::escJS($this->wordpress_user->display_name);
+
+    if(!empty($this->wordpress_user->user_firstname)) {
+     $this->config["firstName"] = Escaper::escJS($this->wordpress_user->user_firstname); 
+
+    } else if(!empty($this->wordpress_user->display_name)) {
+      $this->config["firstName"] = Escaper::escJS($this->wordpress_user->display_name);
     }
-    return $this->settings;
+
+    if (!empty($this->wordpress_user->user_lastname)) {
+      $this->config["lastName"] = Escaper::escJS($this->wordpress_user->user_lastname);
+    }
+
+    return $this->config;
   }
 }
 
@@ -418,19 +428,20 @@ class IValidator
 	private $inputs = array();
   private $validation;
 
-  public function __construct($inputs, $validation)
-  {
+  public function __construct($inputs, $validation) {
     $this->input = $inputs;
     $this->validation = $validation;
   }
 
-  public function validApiKey()
-  {
+  public function validApiKey() {
     return $this->validate($this->input["api_key"]);
   }
 
-  private function validate($x)
-  {
+  public function validPrivateKey() {
+    return $this->validate($this->input["private_key"]);
+  }
+
+  private function validate($x) {
     return call_user_func($this->validation, $x);
   }
 }
@@ -440,8 +451,9 @@ if (!defined('ABSPATH')) exit;
 function add_infoset_snippet()
 {
   $options = get_option('infoset');
-  $snippet_settings = new InfosetSnippetSettings(
-    array("api_key" => Escaper::escJS($options['api_key'])),
+  $snippet_settings = new InfosetSnippetConfig(
+    Escaper::escJS($options['api_key']),
+    Escaper::escJS($options['private_key']),
     wp_get_current_user()
   );
   $snippet = new InfosetSnippet($snippet_settings);
@@ -461,12 +473,14 @@ function add_infoset_settings_page()
 
 function render_infoset_options_page()
 {
-  if (!current_user_can('manage_options'))
-  {
+  if (!current_user_can('manage_options')) {
     wp_die('You are not authorized to access Infoset settings');
   }
+
   $options = get_option('infoset');
-  $settings_page = new InfosetSettingsPage(array("api_key" => $options['api_key']));
+  $settings_page = new InfosetSettingsPage(
+    array("api_key" => $options['api_key'], "private_key" => $options['private_key'])
+  );
   echo $settings_page->htmlUnclosed();
   wp_nonce_field('infoset-update');
   echo $settings_page->htmlClosed();
@@ -474,15 +488,19 @@ function render_infoset_options_page()
 
 function infoset_settings() {
   register_setting('infoset', 'infoset');
-  if (isset($_GET['state']) && wp_verify_nonce($_GET[ 'state'], "infoset-auth") && current_user_can('manage_options') && isset($_GET['api_key']) ) {
+  if (isset($_GET['state']) && wp_verify_nonce($_GET[ 'state'], "infoset-auth") && current_user_can('manage_options') && isset($_GET['api_key']) && isset($_GET['private_key'])) {
     $validator = new IValidator($_GET, function($x) { return wp_kses(trim($x), array()); });
-    update_option("infoset", array("api_key" => $validator->validApiKey()));
+    update_option("infoset",
+      array("api_key" => $validator->validApiKey(), "private_key" => $validator->validPrivateKey())
+    );
+
     $redirect_to = 'options-general.php?page=infoset&authenticated=1';
     wp_safe_redirect(admin_url($redirect_to));
   }
   if (current_user_can('manage_options') && isset($_POST['api_key']) && isset($_POST[ '_wpnonce']) && wp_verify_nonce($_POST[ '_wpnonce'], 'infoset-update')) {
       $options = array();
       $options["api_key"] = Escaper::escAttr($_POST['api_key']);
+      $options["private_key"] = Escaper::escAttr($_POST['private_key']);
       update_option("infoset", $options);
       wp_safe_redirect(admin_url('options-general.php?page=infoset&saved=1'));
   }
@@ -492,5 +510,4 @@ add_action('wp_footer', 'add_infoset_snippet');
 add_action('admin_menu', 'add_infoset_settings_page');
 add_action('network_admin_menu', 'add_infoset_settings_page');
 add_action('admin_init', 'infoset_settings');
-
 
