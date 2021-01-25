@@ -18,3 +18,5 @@ This plugin allows you to add an Infoset Chat Widget to your website with just a
 == Installation ==
 
 Embedding your chat widget to your WordPress site takes only a few minutes. Just click the installation button and follow the instructions.
+
+Note: This plugin injects a Javascript snippet on your website frontend containing dynamic user data. Some caching solutions will cache entire pages and should not be used with this plugin. Doing so may cause messages to be delivered to the wrong user.
