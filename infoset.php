@@ -35,15 +35,15 @@ class InfosetIdVerificationCalculator
   }
 
   private function idVerificationHashComponent() {
-    return array("userHash" => hash_hmac("sha256", $this->userEmail(), $this->privateKey()));
+    return array("userHash" => hash_hmac("sha256", $this->userId(), $this->privateKey()));
   }
 
   private function privateKey() {
     return $this->private_key;
   }
 
-  private function userEmail() {
-    return $this->user_config["email"];
+  private function userId() {
+    return $this->user_config["id"];
   }
 
   private function userConfig() {
@@ -358,7 +358,7 @@ class InfosetSnippetConfig
 
   private function configData()
   {
-    $user = new InfosetUser($this->wordpress_user, $this->config);
+    $user = new InfosetVisitor($this->wordpress_user, $this->config);
     $config = $user->buildConfig();
     $idVerificationCalculator = new InfosetIdVerificationCalculator($config, $this->private_key);
     $result = array_merge($config, $idVerificationCalculator->idVerificationComponent());
@@ -390,7 +390,7 @@ class InfosetEscaper
   }
 }
 
-class InfosetUser
+class InfosetVisitor
 {
 	private $wordpress_user = NULL;
   private $config = array();
@@ -403,6 +403,10 @@ class InfosetUser
   public function buildConfig() {
     if (empty($this->wordpress_user)) {
       return $this->config;
+    }
+
+    if (!empty($this->wordpress_user->ID)) {
+      $this->config["id"] = InfosetEscaper::escJS($this->wordpress_user->ID);
     }
 
     if (!empty($this->wordpress_user->user_email)) {
