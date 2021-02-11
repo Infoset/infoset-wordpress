@@ -73,22 +73,22 @@ END;
   }
 
   public function getAuthUrl() {
-    return "https://dashboard.infoset.app/select-chat?service=wordpress&state=".get_site_url()."::".wp_create_nonce("infoset-auth");
+    return "http://dashboard.infoset.app/select-chat?service=wordpress&state=".get_site_url()."::".wp_create_nonce("infoset-auth");
   }
 
   public function htmlUnclosed()
   {
     $settings = $this->getSettings();
     $styles = $this->getStyles();
-    $api_key = InfosetEscaper::escAttr($settings['api_key']);
-    $private_key = InfosetEscaper::escAttr($settings['private_key']);
+    $api_key = esc_attr($settings['api_key']);
+    $private_key = esc_attr($settings['private_key']);
     $auth_url = $this->getAuthUrl();
     $dismissable_message = '';
     $assets_path = plugin_dir_url(__FILE__) . "assets";
     $styles_path = plugin_dir_url(__FILE__) . "styles";
 
     if (isset($_GET['api_key'])) {
-      $api_key = InfosetEscaper::escAttr($_GET['api_key']);
+      $api_key = sanitize_text_field($_GET['api_key']);
       $dismissable_message = $this->dismissibleMessage("We've copied your new Infoset Chat Api Key below. Click to save changes and then close this window to finish installing the chat widget.");
     }
     if (isset($_GET['saved'])) {
@@ -168,8 +168,8 @@ END;
     $settings = $this->getSettings();
     $styles = $this->getStyles();
     $auth_url = $this->getAuthUrl();
-    $api_key = InfosetEscaper::escAttr($settings['api_key']);
-    $private_key = InfosetEscaper::escAttr($settings['private_key']);
+    $api_key = esc_attr($settings['api_key']);
+    $private_key = esc_attr($settings['private_key']);
     $auth_url_identity_verification = "";
     if (!empty($api_key)) {
       $auth_url_identity_verification = $auth_url.'&identity_verification=1';
@@ -205,8 +205,8 @@ END;
 
   public function setStyles($settings) {
     $styles = array();
-    $api_key = InfosetEscaper::escAttr($settings['api_key']);
-    $private_key = InfosetEscaper::escAttr($settings['private_key']);
+    $api_key = esc_attr($settings['api_key']);
+    $private_key = esc_attr($settings['private_key']);
 
     // Case : Identity Verification enabled : checkbox checked and disabled
     if($private_key) {
@@ -226,7 +226,7 @@ END;
 
     // Copy apiKey from Infoset Setup Guide for validation
     if (isset($_GET['apiKey'])) {
-        $api_key = InfosetEscaper::escAttr($_GET['apiKey']);
+        $api_key = sanitize_text_field($_GET['apiKey']);
         $styles['api_key_state'] = 'readonly';
         $styles['api_key_class'] = "cta__email";
         $styles['button_submit_style'] = '';
@@ -373,23 +373,6 @@ class InfosetSnippetConfig
   }
 }
 
-class InfosetEscaper
-{
-	public static function escAttr($value)
-  {
-    if (function_exists('esc_attr')) {
-      return esc_attr($value);
-    }
-  }
-
-  public static function escJS($value)
-  {
-    if (function_exists('esc_js')) {
-      return esc_js($value);
-    }
-  }
-}
-
 class InfosetVisitor
 {
 	private $wordpress_user = NULL;
@@ -406,22 +389,22 @@ class InfosetVisitor
     }
 
     if (!empty($this->wordpress_user->ID)) {
-      $this->config["id"] = InfosetEscaper::escJS($this->wordpress_user->ID);
+      $this->config["id"] = esc_js($this->wordpress_user->ID);
     }
 
     if (!empty($this->wordpress_user->user_email)) {
-      $this->config["email"] = InfosetEscaper::escJS($this->wordpress_user->user_email);
+      $this->config["email"] = esc_js($this->wordpress_user->user_email);
     }
 
     if(!empty($this->wordpress_user->user_firstname)) {
-     $this->config["firstName"] = InfosetEscaper::escJS($this->wordpress_user->user_firstname); 
+     $this->config["firstName"] = esc_js($this->wordpress_user->user_firstname); 
 
     } else if(!empty($this->wordpress_user->display_name)) {
-      $this->config["firstName"] = InfosetEscaper::escJS($this->wordpress_user->display_name);
+      $this->config["firstName"] = esc_js($this->wordpress_user->display_name);
     }
 
     if (!empty($this->wordpress_user->user_lastname)) {
-      $this->config["lastName"] = InfosetEscaper::escJS($this->wordpress_user->user_lastname);
+      $this->config["lastName"] = esc_js($this->wordpress_user->user_lastname);
     }
 
     return $this->config;
@@ -457,8 +440,8 @@ function add_infoset_snippet()
 {
   $options = get_option('infoset');
   $snippet_settings = new InfosetSnippetConfig(
-    InfosetEscaper::escJS($options['api_key']),
-    InfosetEscaper::escJS($options['private_key']),
+    esc_js($options['api_key']),
+    esc_js($options['private_key']),
     wp_get_current_user()
   );
   $snippet = new InfosetSnippet($snippet_settings);
@@ -504,8 +487,8 @@ function infoset_settings() {
   }
   if (current_user_can('manage_options') && isset($_POST['api_key']) && isset($_POST[ '_wpnonce']) && wp_verify_nonce($_POST[ '_wpnonce'], 'infoset-update')) {
       $options = array();
-      $options["api_key"] = InfosetEscaper::escAttr($_POST['api_key']);
-      $options["private_key"] = InfosetEscaper::escAttr($_POST['private_key']);
+      $options["api_key"] = sanitize_text_input($_POST['api_key']);
+      $options["private_key"] = sanitize_text_input($_POST['private_key']);
       update_option("infoset", $options);
       wp_safe_redirect(admin_url('options-general.php?page=infoset&saved=1'));
   }
